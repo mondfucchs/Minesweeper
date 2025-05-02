@@ -1,4 +1,4 @@
--- Contains all helper functions
+-- General helper functions (not related to the game own logic)
 local utils = {}
 
 utils.boolToInteger = function(condition, falsevalue, truevalue)
@@ -18,6 +18,14 @@ utils.unpackLove = function(t, _i)
         return nil
     end
     return t[i], utils.unpackLove(t, i + 1)
+end
+
+-- Returns a function that returns true only once
+utils.onlyOnce = function()
+    local used = false
+    return function()
+        if used == false then used = true; return true else return false end
+    end
 end
 
 return utils

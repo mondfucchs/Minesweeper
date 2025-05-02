@@ -45,10 +45,16 @@ local function freeZeroFreespots(w, h, minefield)
 end
 --#endregion
 
--- Return a new minefield ```width```x```height``` with ```minecount``` mines.
-minesweeper.createMinefield = function(width, height, minedensity)
-    local _minecount = math.floor(minedensity * width * height)
+minesweeper.createBlankMinefield = function(width, height)
     local minefield = {}
+    Data.numGames = Data.numGames+1
+
+    return minefield
+end
+minesweeper.populateMinefield = function(minefield, minedensity, freex, freey)
+    local width = #minefield
+    local height = #minefield[1]
+    local _minecount = math.floor(minedensity * width * height)
     local minefield_size = width*height
 
     -- Create a chained table with minespots and freepots
@@ -56,7 +62,7 @@ minesweeper.createMinefield = function(width, height, minedensity)
     for _=1, _minecount do
         table.insert(minefield_distribution, newMinespot)
     end
-    for _=1, minefield_size - _minecount do
+    for _=1, minefield_size - _minecount - 1 do
         table.insert(minefield_distribution, newFreespot)
     end
 
@@ -64,9 +70,13 @@ minesweeper.createMinefield = function(width, height, minedensity)
     for w = 1, width do
         minefield[w] = {}
         for h = 1, height do
-            local random_index = math.random(#minefield_distribution)
-            minefield[w][h] = minefield_distribution[random_index]()
-            table.remove(minefield_distribution, random_index)
+            if w == freex and h == freey then
+                minefield[freex][freey] = newFreespot()
+            else
+                local random_index = math.random(#minefield_distribution)
+                minefield[w][h] = minefield_distribution[random_index]()
+                table.remove(minefield_distribution, random_index)
+            end
         end
     end
 
@@ -79,6 +89,7 @@ minesweeper.createMinefield = function(width, height, minedensity)
 
     return minefield
 end
+
 minesweeper.freeZeroFreespots = freeZeroFreespots
 
 return minesweeper

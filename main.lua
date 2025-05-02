@@ -10,10 +10,11 @@ local imgs = {
     flagIndicator= love.graphics.newImage("assets/img/flagIndicator.png")
 }
 local fonts = {
-    bigfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 80)
+    bigfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 80),
+    lilfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 20)
 }
 
--- Drawing helpers
+-- Helpers
 local function drawSpot(spot, x, y)
     if spot.state == "visible" then
         local color = utls.boolToInteger(((y - 1)+(x - 1))%2 == 0, {215/255,184/255,153/255}, {229/255,194/255,159/255})
@@ -21,7 +22,7 @@ local function drawSpot(spot, x, y)
         love.graphics.rectangle("fill", Configs.bordermargin+(x-1)*64, Configs.bordermargin+(y-1)*64, 64, 64)
         love.graphics.setColor(0, 0, 0)
         local text = ""
-        if spot.surrounded > 0 then text = spot.surrounded end
+        if spot.surrounded and spot.surrounded > 0 then text = spot.surrounded end
         love.graphics.print(text, Configs.bordermargin+(x-1)*64+20, Configs.bordermargin+(y-1)*64-32)
     else
         local color = utls.boolToInteger(((y - 1)+(x - 1))%2 == 0, {162/255, 209/255, 73/255}, {170/255,215/255,81/255})
@@ -36,11 +37,18 @@ end
 local function drawField(minefield)
     love.graphics.setColor(utls.unpackLove{Configs.boardBorderColor})
     love.graphics.rectangle("fill", Configs.bordermargin-8, Configs.bordermargin-8,#minefield*64+16, #minefield[1]*64+16)
+    love.graphics.setFont(fonts.bigfont)
 
     for x, a in pairs(minefield) do
         for y, spot in pairs(a) do
             drawSpot(spot, x, y)
         end
+    end
+end
+local function newGame()
+    Minefield = mswe.createBlankMinefield(Configs.boardx, Configs.boardy)
+    for key, _ in pairs(Data.flags) do
+        Data.flags[key] = Data.initialFlags[key]()
     end
 end
 
@@ -54,11 +62,20 @@ function love.load()
     Configs = {
         boardx = 9,
         boardy = 9,
-        boarddensity = 0.2,
+        boarddensity = 1,
         bordermargin = 64,
         boardBorderColor = {25/255, 25/255, 25/255}
     }
-    Minefield = mswe.createMinefield(Configs.boardx, Configs.boardy, Configs.boarddensity)
+    Data = {
+        initialFlags = {
+            firstClick = utls.onlyOnce
+        },
+        flags = {
+            firstClick = utls.onlyOnce()
+        },
+        numGames = 0
+    }
+    Minefield = newGame()
 end
 
 function love.update()
@@ -66,6 +83,10 @@ function love.update()
 end
 
 function love.draw()
+    love.graphics.setColor(0,0,0)
+    love.graphics.setFont(fonts.lilfont)
+    love.graphics.print(Data.numGames, 0, 0)
+    love.graphics.setColor(1,1,1)
     drawField(Minefield)
 end
 
@@ -73,7 +94,7 @@ function love.mousepressed(x, y, button)
     local win = true
     for xpos, a in pairs(Minefield) do
         for ypos, spot in pairs(a) do
-            if  spot.state ~= "visible" and
+            if  not spot.state or spot.state ~= "visible" and
                 x > Configs.bordermargin+(xpos-1)*64 and
                 x < Configs.bordermargin+(xpos-1)*64+64 and
                 y > Configs.bordermargin+(ypos-1)*64 and
@@ -81,8 +102,11 @@ function love.mousepressed(x, y, button)
 
                 if button == 1 and spot.state == "hidden" then
                     spot.state = "visible"
+                    if Data.flags.firstClick() then
+                        spot.type = "freespot"
+                    end
                     if spot.type == "minespot" then
-                        Minefield = mswe.createMinefield(Configs.boardx, Configs.boardy, Configs.boarddensity)
+                        newGame()
                     end
                     if spot.surrounded == 0 then
                         mswe.freeZeroFreespots(xpos, ypos, Minefield)
@@ -99,6 +123,14 @@ function love.mousepressed(x, y, button)
         end
     end
     if win == true then
-        Minefield = mswe.createMinefield(Configs.boardx, Configs.boardy, Configs.boarddensity)
+        newGame()
+    end
+end
+
+function love.keypressed(k)
+    do -- debug
+        if k == "n" then
+            newGame()
+        end
     end
 end
