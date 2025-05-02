@@ -3,17 +3,23 @@ local love = require("love")
 local minesweeper = {}
 
 --#region Spots
-local function newFreespot()
+local function newFreespot(blankspot)
     return {
         type="freespot",
-        state="hidden",
+        state=blankspot.state, -- hidden visible flaged
         surrounded=0
     }
 end
-local function newMinespot()
+local function newMinespot(blankspot)
     return {
         type="minespot",
-        state="hidden", -- hidden visible
+        state=blankspot.state, -- hidden visible flaged
+    }
+end
+local function newBlankspot()
+    return {
+        type="blankspot",
+        state="hidden"
     }
 end
 local function surroundingMinespots(w, h, spot, minefield)
@@ -51,7 +57,7 @@ minesweeper.createBlankMinefield = function(width, height)
     for w = 1, width do
         minefield[w] = {}
         for h = 1, height do
-            minefield[w][h] = {notPopulated=true}
+            minefield[w][h] = newBlankspot()
         end
     end
 
@@ -74,14 +80,13 @@ minesweeper.populateMinefield = function(minefield, minedensity, freex, freey)
 
     -- Populate minefield
     for w = 1, width do
-        minefield[w] = {}
         for h = 1, height do
             if w == freex and h == freey then
-                minefield[freex][freey] = newFreespot()
+                minefield[freex][freey] = newFreespot(minefield[freex][freey])
                 minefield[freex][freey].state = "visible"
             else
                 local random_index = math.random(#minefield_distribution)
-                minefield[w][h] = minefield_distribution[random_index]()
+                minefield[w][h] = minefield_distribution[random_index](minefield[w][h])
                 table.remove(minefield_distribution, random_index)
             end
         end

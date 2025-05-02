@@ -48,9 +48,7 @@ end
 local function newGame()
     Data.numGames = Data.numGames+1
     local minefield = mswe.createBlankMinefield(Configs.boardx, Configs.boardy)
-    for key, _ in pairs(Data.flags) do
-        Data.flags[key] = Data.initialFlags[key]()
-    end
+    Data.flagcount = 0
     return minefield
 end
 
@@ -62,19 +60,14 @@ function love.load()
 
     -- Structures
     Configs = {
-        boardx = 9,
-        boardy = 9,
+        boardx = 5,
+        boardy = 5,
         boarddensity = 0.2,
         bordermargin = 64,
         boardBorderColor = {25/255, 25/255, 25/255}
     }
     Data = {
-        initialFlags = {
-            firstClick = utls.onlyOnce
-        },
-        flags = {
-            firstClick = utls.onlyOnce()
-        },
+        flagcount = 0,
         numGames = 0
     }
     Minefield = newGame()
@@ -87,7 +80,7 @@ end
 function love.draw()
     love.graphics.setColor(0,0,0)
     love.graphics.setFont(fonts.lilfont)
-    love.graphics.printf("7",64,12,#Minefield*64,"center")
+    love.graphics.printf(math.floor(Configs.boarddensity*Configs.boardx*Configs.boardy)-Data.flagcount, 64, 12, #Minefield*64, "center")
     love.graphics.setColor(1,1,1)
     drawField(Minefield)
 end
@@ -103,7 +96,17 @@ function love.mousepressed(x, y, button)
                 y > Configs.bordermargin+(ypos-1)*64 and
                 y < Configs.bordermargin+(ypos-1)*64+64 then
 
-                if spot.notPopulated then notPopulated = {bool=true, x=xpos, y=ypos} break end
+                if button == 2 then
+                    if spot.state == "hidden" then
+                        spot.state = "flaged"
+                        Data.flagcount = Data.flagcount + 1
+                    else
+                        spot.state = "hidden"
+                        Data.flagcount = Data.flagcount - 1
+                    end
+                end
+
+                if spot.type == "blankspot" and button==1 then notPopulated = {bool=true, x=xpos, y=ypos} break end
 
                 if button == 1 and spot.state == "hidden" then
                     spot.state = "visible"
@@ -112,12 +115,6 @@ function love.mousepressed(x, y, button)
                     end
                     if spot.surrounded == 0 then
                         mswe.freeZeroFreespots(xpos, ypos, Minefield)
-                    end
-                elseif button == 2 then
-                    if spot.state == "hidden" then
-                        spot.state = "flaged"
-                    else
-                        spot.state = "hidden"
                     end
                 end
             end
