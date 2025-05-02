@@ -16,7 +16,7 @@ local fonts = {
 
 -- Helpers
 local function drawSpot(spot, x, y)
-    if spot.state == "visible" then
+    if spot and spot.state == "visible" then
         local color = utls.boolToInteger(((y - 1)+(x - 1))%2 == 0, {215/255,184/255,153/255}, {229/255,194/255,159/255})
         love.graphics.setColor(utls.unpackLove(color))
         love.graphics.rectangle("fill", Configs.bordermargin+(x-1)*64, Configs.bordermargin+(y-1)*64, 64, 64)
@@ -29,7 +29,7 @@ local function drawSpot(spot, x, y)
         love.graphics.setColor(utls.unpackLove(color))
         love.graphics.rectangle("fill",Configs.bordermargin+(x-1)*64, Configs.bordermargin+(y-1)*64, 64, 64)
         love.graphics.setColor(1, 1, 1)
-        if spot.state == "flaged" then
+        if spot and spot.state == "flaged" then
             love.graphics.draw(imgs.flagIndicator, Configs.bordermargin+(x-1)*64, Configs.bordermargin+(y-1)*64)
         end
     end
@@ -46,10 +46,12 @@ local function drawField(minefield)
     end
 end
 local function newGame()
-    Minefield = mswe.createBlankMinefield(Configs.boardx, Configs.boardy)
+    Data.numGames = Data.numGames+1
+    local minefield = mswe.createBlankMinefield(Configs.boardx, Configs.boardy)
     for key, _ in pairs(Data.flags) do
         Data.flags[key] = Data.initialFlags[key]()
     end
+    return minefield
 end
 
 -- Löve callbacks
@@ -62,7 +64,7 @@ function love.load()
     Configs = {
         boardx = 9,
         boardy = 9,
-        boarddensity = 1,
+        boarddensity = 0.2,
         bordermargin = 64,
         boardBorderColor = {25/255, 25/255, 25/255}
     }
@@ -85,28 +87,28 @@ end
 function love.draw()
     love.graphics.setColor(0,0,0)
     love.graphics.setFont(fonts.lilfont)
-    love.graphics.print(Data.numGames, 0, 0)
+    love.graphics.printf("7",64,12,#Minefield*64,"center")
     love.graphics.setColor(1,1,1)
     drawField(Minefield)
 end
 
 function love.mousepressed(x, y, button)
     local win = true
+    local notPopulated = {bool=false, x=1, y=1}
     for xpos, a in pairs(Minefield) do
         for ypos, spot in pairs(a) do
-            if  not spot.state or spot.state ~= "visible" and
+            if  spot.state ~= "visible" and
                 x > Configs.bordermargin+(xpos-1)*64 and
                 x < Configs.bordermargin+(xpos-1)*64+64 and
                 y > Configs.bordermargin+(ypos-1)*64 and
                 y < Configs.bordermargin+(ypos-1)*64+64 then
 
+                if spot.notPopulated then notPopulated = {bool=true, x=xpos, y=ypos} break end
+
                 if button == 1 and spot.state == "hidden" then
                     spot.state = "visible"
-                    if Data.flags.firstClick() then
-                        spot.type = "freespot"
-                    end
                     if spot.type == "minespot" then
-                        newGame()
+                        Minefield = newGame()
                     end
                     if spot.surrounded == 0 then
                         mswe.freeZeroFreespots(xpos, ypos, Minefield)
@@ -121,16 +123,20 @@ function love.mousepressed(x, y, button)
             end
             if spot.state == "hidden" then win = false end
         end
+        if notPopulated.bool then break end
     end
-    if win == true then
-        newGame()
+    if notPopulated.bool then
+        Minefield = mswe.populateMinefield(Minefield, Configs.boarddensity, notPopulated.x, notPopulated.y)
+    end
+    if win == true and not notPopulated.bool then
+        Minefield = newGame()
     end
 end
 
 function love.keypressed(k)
     do -- debug
         if k == "n" then
-            newGame()
+            Minefield = newGame()
         end
     end
 end

@@ -47,7 +47,13 @@ end
 
 minesweeper.createBlankMinefield = function(width, height)
     local minefield = {}
-    Data.numGames = Data.numGames+1
+
+    for w = 1, width do
+        minefield[w] = {}
+        for h = 1, height do
+            minefield[w][h] = {notPopulated=true}
+        end
+    end
 
     return minefield
 end
@@ -72,6 +78,7 @@ minesweeper.populateMinefield = function(minefield, minedensity, freex, freey)
         for h = 1, height do
             if w == freex and h == freey then
                 minefield[freex][freey] = newFreespot()
+                minefield[freex][freey].state = "visible"
             else
                 local random_index = math.random(#minefield_distribution)
                 minefield[w][h] = minefield_distribution[random_index]()
