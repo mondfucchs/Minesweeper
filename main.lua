@@ -62,7 +62,7 @@ function love.load()
     Configs = {
         boardx = 5,
         boardy = 5,
-        boarddensity = 0.2,
+        boarddensity = 0.8,
         bordermargin = 64,
         boardBorderColor = {25/255, 25/255, 25/255}
     }
