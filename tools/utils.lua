@@ -1,7 +1,7 @@
 -- General helper functions (not related to the game own logic)
 local utils = {}
 
-utils.boolToInteger = function(condition, falsevalue, truevalue)
+utils.boolToValue = function(condition, falsevalue, truevalue)
     return condition and truevalue or falsevalue
 end
 
