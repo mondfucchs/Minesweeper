@@ -42,7 +42,8 @@ local function freeZeroFreespots(w, h, minefield)
                 if minefield[nw] and minefield[nw][nh] and minefield[nw][nh].state == "hidden" then
                     minefield[nw][nh].state = "visible"
                     if minefield[nw][nh].surrounded == 0 then
-                    freeZeroFreespots(nw, nh, minefield)
+                        freeZeroFreespots(nw, nh, minefield)
+                        love.audio.play(Sounds.big_dig)
                     end
                 end
             end

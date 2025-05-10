@@ -10,6 +10,11 @@ local imgs = {
     minespot = love.graphics.newImage("assets/img/minespot.png"),
     flagIndicator= love.graphics.newImage("assets/img/flagIndicator.png")
 }
+Sounds = {
+    dig_spot = love.audio.newSource("assets/sound/dig_spot.wav", "static"),
+    big_dig = love.audio.newSource("assets/sound/big_dig.wav", "static"),
+    explosion = love.audio.newSource("assets/sound/explosion.wav", "static")
+}
 local fonts = {
     bigfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 80),
     lilfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 20)
@@ -41,7 +46,7 @@ local function drawSpot(spot, x, y)
     end
 end
 local function drawField(minefield)
-    love.graphics.setColor(utls.unpackLove{Configs.boardBorderColor})
+    love.graphics.setColor(utls.unpackLove{Configs.board_border_color})
     love.graphics.rectangle("fill", Configs.x-8, Configs.y-8,#minefield*64+16, #minefield[1]*64+16)
     love.graphics.setFont(fonts.bigfont)
 
@@ -59,7 +64,7 @@ local function newGame()
     return minefield
 end
 local function winGame()
-    cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() Configs.x, Configs.y = 64, 64 end, "atEnd", "waitrestart")
+    cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() Configs.y = 64 end, "atEnd", "waitrestart")
     local yvel, time = 0, 0
     local inity = Configs.y - 32
     cloc.addTimer(Mainclock, 0.5, function()
@@ -74,15 +79,19 @@ local function loseGame()
     Data.mouseactive = false
     local xvel, time = 0, 0
     local initx = Configs.x - 32
+    local animation_time = 0
 
     for x, a in pairs(Minefield) do
         for y, spot in pairs(a) do
-            cloc.addTimer(Mainclock, ((y-1)*10+x)/32, function() spot.state = "visible" end, "atEnd", "ANIMATvisibleboard" .. x .. y)
+            if spot.state == "hidden" or (spot.state == "flaged" and spot.type == "freespot") then
+                animation_time = animation_time+1
+                cloc.addTimer(Mainclock, (animation_time)/16, function() spot.state = "visible"; love.audio.play(Sounds.dig_spot) end, "atEnd", "ANIMATvisibleboard" .. x .. y)                
+            end
         end
     end
 
-    cloc.addTimer(Mainclock, 8.1, function() Minefield = newGame() Configs.x, Configs.x = 64, 64 end, "atEnd", "waitrestart")
-    cloc.addTimer(Mainclock, 4, function()
+    cloc.addTimer(Mainclock, animation_time/16+5.1, function() Minefield = newGame(); Configs.x = 64 end, "atEnd", "waitrestart")
+    cloc.addTimer(Mainclock, animation_time/16+1, function()
         cloc.addTimer(Mainclock, 4, function()
         time = time+1
         xvel = ((time-12)^2+144)*0.1
@@ -101,10 +110,10 @@ function love.load()
     Configs = {
         boardx = 9,
         boardy = 9,
-        boarddensity = 0.0125,
+        board_density = 0.2,
         x = 64,
         y = 64,
-        boardBorderColor = {25/255, 25/255, 25/255}
+        board_border_color = {25/255, 25/255, 25/255}
     }
     Data = {
         flagcount = 0,
@@ -120,9 +129,12 @@ end
 function love.draw()
     love.graphics.setColor(0,0,0)
     love.graphics.setFont(fonts.lilfont)
-    love.graphics.printf(math.floor(Configs.boarddensity*Configs.boardx*Configs.boardy)-Data.flagcount, 64, 12, #Minefield*64, "center")
+    love.graphics.printf(math.floor(Configs.board_density*Configs.boardx*Configs.boardy)-Data.flagcount, 64, 12, #Minefield*64, "center")
     love.graphics.setColor(1,1,1)
     drawField(Minefield)
+
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.print(#Mainclock)
 end
 function love.mousepressed(x, y, button)
     if Data.mouseactive then
@@ -149,22 +161,25 @@ function love.mousepressed(x, y, button)
                     if spot.type == "blankspot" and button==1 then notPopulated = {bool=true, x=xpos, y=ypos} break end
 
                     if button == 1 and spot.state == "hidden" then
+                        love.audio.play(Sounds.dig_spot)
                         spot.state = "visible"
                         if spot.type == "minespot" then
                             win = false
+                            love.audio.play(Sounds.explosion)
                             loseGame()
                         end
                         if spot.surrounded == 0 then
                             mswe.freeZeroFreespots(xpos, ypos, Minefield)
+                            love.audio.play(Sounds.big_dig)
                         end
                     end
                 end
                 if spot.state == "hidden" then win = false end
             end
-            if notPopulated.bool then break end
+            if notPopulated.bool then love.audio.play(Sounds.dig_spot); break end
         end
         if notPopulated.bool then
-            Minefield = mswe.populateMinefield(Minefield, Configs.boarddensity, notPopulated.x, notPopulated.y)
+            Minefield = mswe.populateMinefield(Minefield, Configs.board_density, notPopulated.x, notPopulated.y)
             if Minefield[notPopulated.x][notPopulated.y].surrounded == 0 then mswe.freeZeroFreespots(notPopulated.x, notPopulated.y, Minefield) end
         end
         if win == true and not notPopulated.bool then
