@@ -3,8 +3,6 @@ local mswe = require("tools.minesweeper")
 local utls = require("tools.utils")
 local cloc = require("tools.clock")
 
-math.randomseed(os.clock()*717171, os.time()*414141)
-
 -- Assets
 local imgs = {
     minespot = love.graphics.newImage("assets/img/minespot.png"),
@@ -13,10 +11,13 @@ local imgs = {
 Sounds = {
     dig_spot = love.audio.newSource("assets/sound/dig_spot.wav", "static"),
     big_dig = love.audio.newSource("assets/sound/big_dig.wav", "static"),
-    explosion = love.audio.newSource("assets/sound/explosion.wav", "static")
+    put_flag = love.audio.newSource("assets/sound/put_flag.wav", "static"),
+    explosion = love.audio.newSource("assets/sound/explosion.wav", "static"),
+    win = love.audio.newSource("assets/sound/win.wav", "static")
 }
 local fonts = {
     bigfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 80),
+    midfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 40),
     lilfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 20)
 }
 
@@ -57,10 +58,11 @@ local function drawField(minefield)
     end
 end
 local function newGame()
+    math.randomseed(tonumber(Data.options[3].value) or os.clock()*717171, os.time()*414141)
     Data.numGames = Data.numGames+1
     Data.flagcount = 0
     Data.mouseactive = true
-    local minefield = mswe.createBlankMinefield(Configs.boardx, Configs.boardy)
+    local minefield = mswe.createBlankMinefield(Data.options[1].value, Data.options[2].value)
     return minefield
 end
 local function winGame()
@@ -108,9 +110,7 @@ function love.load()
 
     -- Structures
     Configs = {
-        boardx = 9,
-        boardy = 9,
-        board_density = 0.2,
+        board_density = 0.05,
         x = 64,
         y = 64,
         board_border_color = {25/255, 25/255, 25/255}
@@ -119,22 +119,44 @@ function love.load()
         flagcount = 0,
         numGames = 0,
         mouseactive = true,
+        gamestate = "options",
+        selected_option = 1,
+        options = {},
     }
+    table.insert(Data.options, {name="Board width", value=9, max=9, min=3, reset=true})
+    table.insert(Data.options, {name="Board height", value=9, max=9, min=3, reset=true})
+    table.insert(Data.options, {name="Randomseed", value="", reset=true})
+    table.insert(Data.options, {name="Volume", value=6, max=10, min=0, reset=false})
     Minefield = newGame()
     Mainclock = cloc.newClock()
 end
 function love.update(dt)
-    cloc.runClock(Mainclock, dt)
+    if Data.gamestate == "play" then
+        cloc.runClock(Mainclock, dt)        
+    end
 end
 function love.draw()
-    love.graphics.setColor(0,0,0)
-    love.graphics.setFont(fonts.lilfont)
-    love.graphics.printf(math.floor(Configs.board_density*Configs.boardx*Configs.boardy)-Data.flagcount, 64, 12, #Minefield*64, "center")
-    love.graphics.setColor(1,1,1)
-    drawField(Minefield)
+    if Data.gamestate == "play" then
+        love.graphics.setColor(0,0,0)
+        love.graphics.setFont(fonts.lilfont)
+        love.graphics.printf(math.floor(Configs.board_density*Data.options[1].value*Data.options[2].value)-Data.flagcount, 64, 12, #Minefield*64, "center")
+        love.graphics.setColor(1,1,1)
+        drawField(Minefield)
+    else
+        love.graphics.setFont(fonts.bigfont)
+        love.graphics.print("OPTIONS", 64, 64)
 
-    love.graphics.setColor(0, 0, 0)
-    love.graphics.print(#Mainclock)
+        love.graphics.setFont(fonts.midfont)
+
+        for i, option in pairs(Data.options) do
+            if i == Data.selected_option then
+                love.graphics.setColor(50/255, 120/255, 160/255)
+            end
+            love.graphics.print(option.name, 64, 192+(i-1)*64)
+            love.graphics.print(option.value, love.graphics.getWidth()-64-fonts.midfont:getWidth(option.value), 192+(i-1)*64)
+            love.graphics.setColor(0, 0, 0)
+        end
+    end
 end
 function love.mousepressed(x, y, button)
     if Data.mouseactive then
@@ -149,6 +171,7 @@ function love.mousepressed(x, y, button)
                     y < Configs.y+(ypos-1)*64+64 then
 
                     if button == 2 then
+                        love.audio.play(Sounds.put_flag)
                         if spot.state == "hidden" then
                             spot.state = "flaged"
                             Data.flagcount = Data.flagcount + 1
@@ -183,14 +206,43 @@ function love.mousepressed(x, y, button)
             if Minefield[notPopulated.x][notPopulated.y].surrounded == 0 then mswe.freeZeroFreespots(notPopulated.x, notPopulated.y, Minefield) end
         end
         if win == true and not notPopulated.bool then
+            love.audio.play(Sounds.win)
             winGame()
         end 
     end
 end
 function love.keypressed(k)
-    do -- debug
-        if k == "n" then
-            Minefield = newGame()
+    if Data.gamestate == "options" then
+        if k == "o" then
+            Data.gamestate = "play"
+        end
+
+        if k == "s" or k == "down" then
+            Data.selected_option = utls.addInInterval(Data.selected_option, 1, 1, #Data.options)
+        elseif k == "w" or k == "up" then
+            Data.selected_option = utls.addInInterval(Data.selected_option, -1, 1, #Data.options)
+        end
+
+        if Data.selected_option ~= 3 then
+            if k == "d" or k == "right" then
+                Data.options[Data.selected_option].value = utls.addInInterval(Data.options[Data.selected_option].value, 1, Data.options[Data.selected_option].min, Data.options[Data.selected_option].max)
+                if Data.options[Data.selected_option].reset then Minefield = newGame() end
+            elseif k == "a" or k == "left" then
+                Data.options[Data.selected_option].value = utls.addInInterval(Data.options[Data.selected_option].value, -1, Data.options[Data.selected_option].min, Data.options[Data.selected_option].max)
+                if Data.options[Data.selected_option].reset then Minefield = newGame() end
+            end
+        else
+            if tonumber(k) and #Data.options[3].value <= 20 then
+                Data.options[3].value = Data.options[3].value .. k
+                if Data.options[Data.selected_option].reset then Minefield = newGame() end
+            elseif k == "backspace" then
+                Data.options[3].value = string.sub(Data.options[3].value, 1, #Data.options[3].value-1)
+                if Data.options[Data.selected_option].reset then Minefield = newGame() end
+            end
+        end
+    elseif Data.gamestate == "play" then
+        if k == "o" then
+            Data.gamestate = "options"
         end
     end
 end
