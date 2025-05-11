@@ -133,7 +133,7 @@ function love.load()
             flagcount = 0,
             numGames = 0,
             mouseactive = true,
-            gamestate = "options",
+            gamestate = "play",
             selected_option = 1,
             options = {},
         }
