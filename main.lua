@@ -237,7 +237,7 @@ function love.mousepressed(x, y, button)
                         end
                     end
                 end
-                if spot.state == "hidden" then win = false end
+                if spot.state == "hidden" or (spot.state == "flaged" and spot.type ~= "minespot") then win = false end
             end
             if notPopulated.bool then love.audio.play(Sounds.dig_spot); break end
         end
