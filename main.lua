@@ -62,6 +62,9 @@ local function newGame()
     math.randomseed(tonumber(Data.options[3].value) or os.clock()*717171)
     Mainclock = cloc.newClock()
 
+    Configs.x = love.graphics.getWidth()/2 - (Data.options[1].value*64)/2
+    Configs.y = love.graphics.getHeight()/2 - (Data.options[2].value*64)/2
+
     Data.numGames = Data.numGames+1
     Data.flagcount = 0
     Data.mouseactive = true
@@ -69,7 +72,7 @@ local function newGame()
     return mswe.createBlankMinefield(Data.options[1].value, Data.options[2].value)
 end
 local function winGame()
-    cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() Configs.y = 64 end, "atEnd", "waitrestart")
+    cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() end, "atEnd", "waitrestart")
     if Data.options[6].value == 1 then
         local yvel, time = 0, 0
         local inity = Configs.y - 32
@@ -114,7 +117,7 @@ local function loseGame()
             end
         end
     end
-    cloc.addTimer(Mainclock, animation_time/16+5.1, function() Minefield = newGame(); Configs.x = 64 end, "atEnd", "waitrestart")
+    cloc.addTimer(Mainclock, animation_time/16+5.1, function() Minefield = newGame() end, "atEnd", "waitrestart")
 end
 
 -- Löve callbacks
@@ -133,8 +136,8 @@ function love.load()
             selected_option = 1,
             options = {},
         }
-        table.insert(Data.options, {name="Board width", value=9, max=9, min=3, reset=true})
-        table.insert(Data.options, {name="Board height", value=9, max=9, min=3, reset=true})
+        table.insert(Data.options, {name="Board width", value=9, max=9, min=1, reset=true})
+        table.insert(Data.options, {name="Board height", value=9, max=9, min=1, reset=true})
         table.insert(Data.options, {name="Seed", value="", reset=true})
         table.insert(Data.options, {name="Mine density (0 to 100)", value="20", reset=true})
         table.insert(Data.options, {name="Volume", value=6, max=10, min=0, reset=false})
@@ -157,7 +160,7 @@ function love.draw()
     if Data.gamestate == "play" then
         love.graphics.setColor(0,0,0)
         love.graphics.setFont(fonts.lilfont)
-        love.graphics.printf(math.floor(tonumber(Data.options[4].value)/100*Data.options[1].value*Data.options[2].value)-Data.flagcount, 64, 12, #Minefield*64, "center")
+        love.graphics.printf(math.floor(tonumber(Data.options[4].value)/100*Data.options[1].value*Data.options[2].value)-Data.flagcount, 0, Configs.y-52, love.graphics.getWidth(), "center")
         love.graphics.setColor(1,1,1)
         drawField(Minefield)
     else
@@ -197,7 +200,7 @@ function love.mousepressed(x, y, button)
                     y < Configs.y+(ypos-1)*64+64 then
 
                     -- premature win, miserable little darning exceptions
-                    if math.floor(tonumber(Data.options[4].value) * Data.options[1].value * Data.options[2].value) == 0 then
+                    if math.floor(tonumber(Data.options[4].value/100) * Data.options[1].value * Data.options[2].value) == 0 then
                         cloc.addTimer(Mainclock, 0.3, function() love.audio.play(Sounds.win) end, "atEnd", "waitwin")
                         winGame()
                     end
