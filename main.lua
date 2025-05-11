@@ -14,7 +14,8 @@ Sounds = {
     big_dig = love.audio.newSource("assets/sound/big_dig.wav", "static"),
     put_flag = love.audio.newSource("assets/sound/put_flag.wav", "static"),
     explosion = love.audio.newSource("assets/sound/explosion.wav", "static"),
-    win = love.audio.newSource("assets/sound/win.wav", "static")
+    win = love.audio.newSource("assets/sound/win.wav", "static"),
+    blip = love.audio.newSource("assets/sound/blip.wav", "static")
 }
 local fonts = {
     bigfont = love.graphics.newFont("assets/fonts/Mousetrap.ttf", 80),
@@ -163,6 +164,10 @@ function love.draw()
         love.graphics.printf(math.floor(tonumber(Data.options[4].value)/100*Data.options[1].value*Data.options[2].value)-Data.flagcount, 0, Configs.y-52, love.graphics.getWidth(), "center")
         love.graphics.setColor(1,1,1)
         drawField(Minefield)
+        love.graphics.setFont(fonts.lilfont)
+        love.graphics.setColor(0.5, 0.5, 0.5)
+        love.graphics.printf("(E) to access options - (N) to start a new game", 0, love.graphics.getWidth()-48, love.graphics.getWidth(), "center")
+
     else
         love.graphics.setFont(fonts.bigfont)
         love.graphics.setColor(0, 0, 0)
@@ -243,12 +248,12 @@ function love.mousepressed(x, y, button)
         if win == true and not notPopulated.bool then
             love.audio.play(Sounds.win)
             winGame()
-        end 
+        end
     end
 end
 function love.keypressed(k)
     if Data.gamestate == "options" then
-        if k == "o" then
+        if k == "e" then
             Data.gamestate = "play"
             for _, sound in pairs(Sounds) do
                 sound:setVolume(Data.options[5].value/10)
@@ -278,16 +283,21 @@ function love.keypressed(k)
             end
         else
             if k == "d" or k == "right" then
+                love.audio.play(Sounds.blip)
                 Data.options[Data.selected_option].value = utls.addInInterval(Data.options[Data.selected_option].value, 1, Data.options[Data.selected_option].min, Data.options[Data.selected_option].max)
                 if Data.options[Data.selected_option].reset then Minefield = newGame() end
             elseif k == "a" or k == "left" then
+                love.audio.play(Sounds.blip)
                 Data.options[Data.selected_option].value = utls.addInInterval(Data.options[Data.selected_option].value, -1, Data.options[Data.selected_option].min, Data.options[Data.selected_option].max)
                 if Data.options[Data.selected_option].reset then Minefield = newGame() end
             end
         end
     elseif Data.gamestate == "play" then
-        if k == "o" then
+        if k == "e" then
             Data.gamestate = "options"
+        elseif k == "n" then
+            love.audio.play(Sounds.blip)
+            Minefield = newGame()
         end
     end
 end
