@@ -6,7 +6,8 @@ local cloc = require("tools.clock")
 -- Assets
 local imgs = {
     minespot = love.graphics.newImage("assets/img/minespot.png"),
-    flagIndicator= love.graphics.newImage("assets/img/flagIndicator.png")
+    flagIndicator = love.graphics.newImage("assets/img/flagIndicator.png"),
+    configs = love.graphics.newImage("assets/img/configs.png"),
 }
 Sounds = {
     dig_spot = love.audio.newSource("assets/sound/dig_spot.wav", "static"),
@@ -48,7 +49,7 @@ local function drawSpot(spot, x, y)
 end
 local function drawField(minefield)
     love.graphics.setColor(utls.unpackLove{Configs.board_border_color})
-    love.graphics.rectangle("fill", Configs.x-8, Configs.y-8,#minefield*64+16, #minefield[1]*64+16)
+    love.graphics.rectangle("fill", Configs.x-8, Configs.y-8, #minefield*64+16, #minefield[1]*64+16)
     love.graphics.setFont(fonts.bigfont)
 
     for x, a in pairs(minefield) do
@@ -60,23 +61,26 @@ end
 local function newGame()
     math.randomseed(tonumber(Data.options[3].value) or os.clock()*717171)
     Mainclock = cloc.newClock()
+
     Data.numGames = Data.numGames+1
     Data.flagcount = 0
     Data.mouseactive = true
-    local minefield = mswe.createBlankMinefield(Data.options[1].value, Data.options[2].value)
-    return minefield
+
+    return mswe.createBlankMinefield(Data.options[1].value, Data.options[2].value)
 end
 local function winGame()
     cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() Configs.y = 64 end, "atEnd", "waitrestart")
-    local yvel, time = 0, 0
-    local inity = Configs.y - 32
-    cloc.addTimer(Mainclock, 0.5, function()
-        cloc.addTimer(Mainclock, 2, function()
-        time = time+1
-        yvel = ((time-12)^2+144)*0.1
-        Configs.y = inity+yvel
-        end, "untilEnd", "ANIMATtakeboardout") end, "atEnd", "waitANIMATtakeboardout"
-    )
+    if Data.options[6].value == 1 then
+        local yvel, time = 0, 0
+        local inity = Configs.y - 32
+        cloc.addTimer(Mainclock, 0.5, function()
+            cloc.addTimer(Mainclock, 2, function()
+            time = time+1
+            yvel = ((time-12)^2+144)*0.1
+            Configs.y = inity+yvel
+            end, "untilEnd", "ANIMATtakeboardout") end, "atEnd", "waitANIMATtakeboardout"
+        )
+    end
 end
 local function loseGame()
     Data.mouseactive = false
@@ -84,23 +88,33 @@ local function loseGame()
     local initx = Configs.x - 32
     local animation_time = 0
 
-    for x, a in pairs(Minefield) do
-        for y, spot in pairs(a) do
-            if spot.state == "hidden" or (spot.state == "flaged" and spot.type == "freespot") then
-                animation_time = animation_time+1
-                cloc.addTimer(Mainclock, (animation_time)/16, function() spot.state = "visible"; love.audio.play(Sounds.dig_spot) end, "atEnd", "ANIMATvisibleboard" .. x .. y)                
+    if Data.options[6].value == 1 then
+        for x, a in pairs(Minefield) do
+            for y, spot in pairs(a) do
+                if spot.state == "hidden" or (spot.state == "flaged" and spot.type == "freespot") then
+                    animation_time = animation_time+1
+                    cloc.addTimer(Mainclock, (animation_time)/16, function() spot.state = "visible"; love.audio.play(Sounds.dig_spot) end, "atEnd", "ANIMATvisibleboard" .. x .. y)                
+                end
+            end
+        end
+
+        cloc.addTimer(Mainclock, animation_time/16+1, function()
+            cloc.addTimer(Mainclock, 4, function()
+            time = time+1
+            xvel = ((time-12)^2+144)*0.1
+            Configs.x = initx+xvel
+        end, "untilEnd", "ANIMATtakeboardout") end, "atEnd", "waitANIMATtakeboardout"
+        )
+    else
+        for x, a in pairs(Minefield) do
+            for y, spot in pairs(a) do
+                if spot.state == "hidden" or (spot.state == "flaged" and spot.type == "freespot") then
+                    spot.state = "visible"
+                end
             end
         end
     end
-
     cloc.addTimer(Mainclock, animation_time/16+5.1, function() Minefield = newGame(); Configs.x = 64 end, "atEnd", "waitrestart")
-    cloc.addTimer(Mainclock, animation_time/16+1, function()
-        cloc.addTimer(Mainclock, 4, function()
-        time = time+1
-        xvel = ((time-12)^2+144)*0.1
-        Configs.x = initx+xvel
-    end, "untilEnd", "ANIMATtakeboardout") end, "atEnd", "waitANIMATtakeboardout"
-    )
 end
 
 -- Löve callbacks
@@ -123,7 +137,8 @@ function love.load()
         table.insert(Data.options, {name="Board height", value=9, max=9, min=3, reset=true})
         table.insert(Data.options, {name="Seed", value="", reset=true})
         table.insert(Data.options, {name="Mine density (0 to 100)", value="20", reset=true})
-        table.insert(Data.options, {name="Volume", value=6, max=10, min=0, reset=false})        
+        table.insert(Data.options, {name="Volume", value=6, max=10, min=0, reset=false})
+        table.insert(Data.options, {name="Animations", value=1, max=1, min=0, reset=false})
     end
     Configs = {
         x = 64,
@@ -147,18 +162,26 @@ function love.draw()
         drawField(Minefield)
     else
         love.graphics.setFont(fonts.bigfont)
-        love.graphics.print("OPTIONS", 64, 64)
+        love.graphics.setColor(0, 0, 0)
+        love.graphics.printf("OPTIONS", 0, 64, love.graphics.getWidth(), "center")
+
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.draw(imgs.configs, (love.graphics.getWidth())/2-12, 196)
+        love.graphics.setColor(0, 0, 0)
 
         love.graphics.setFont(fonts.midfont)
-
         for i, option in pairs(Data.options) do
             if i == Data.selected_option then
                 love.graphics.setColor(50/255, 120/255, 160/255)
             end
-            love.graphics.print(option.name, 64, 192+(i-1)*64)
-            love.graphics.print(option.value, love.graphics.getWidth()-64-fonts.midfont:getWidth(option.value), 192+(i-1)*64)
+            love.graphics.print(option.name, 64, 256+(i-1)*58)
+            love.graphics.print(option.value, love.graphics.getWidth()-64-fonts.midfont:getWidth(option.value), 256+(i-1)*58)
             love.graphics.setColor(0, 0, 0)
         end
+
+        love.graphics.setFont(fonts.lilfont)
+        love.graphics.setColor(0.5, 0.5, 0.5)
+        love.graphics.printf("made with LÖVE and LOVE by mondfuchs", 0, love.graphics.getWidth()-48, love.graphics.getWidth(), "center")
     end
 end
 function love.mousepressed(x, y, button)
@@ -172,6 +195,12 @@ function love.mousepressed(x, y, button)
                     x < Configs.x+(xpos-1)*64+64 and
                     y > Configs.y+(ypos-1)*64 and
                     y < Configs.y+(ypos-1)*64+64 then
+
+                    -- premature win, miserable little darning exceptions
+                    if math.floor(tonumber(Data.options[4].value) * Data.options[1].value * Data.options[2].value) == 0 then
+                        cloc.addTimer(Mainclock, 0.3, function() love.audio.play(Sounds.win) end, "atEnd", "waitwin")
+                        winGame()
+                    end
 
                     if button == 2 then
                         love.audio.play(Sounds.put_flag)
@@ -218,6 +247,9 @@ function love.keypressed(k)
     if Data.gamestate == "options" then
         if k == "o" then
             Data.gamestate = "play"
+            for _, sound in pairs(Sounds) do
+                sound:setVolume(Data.options[5].value/10)
+            end
             if not tonumber(Data.options[4].value) then Data.options[4].value = "20" end
         end
         if k == "s" or k == "down" then
