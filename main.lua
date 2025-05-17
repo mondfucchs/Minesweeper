@@ -72,7 +72,18 @@ local function newGame()
 
     return mswe.createBlankMinefield(Data.options[1].value, Data.options[2].value)
 end
+local function checkWin(minefield)
+    for xpos, a in pairs(minefield) do
+        for ypos, spot in pairs(a) do
+            if (spot.state == "hidden" and spot.type == "freespot") or (spot.state == "flaged" and spot.state == "freespot") or spot.type == "blankspot" then
+                return false
+            end
+        end
+    end
+    return true
+end
 local function winGame()
+    Data.mouseactive = false
     cloc.addTimer(Mainclock, 2.6, function() Minefield = newGame() end, "atEnd", "waitrestart")
     if Data.options[6].value == 1 then
         local yvel, time = 0, 0
@@ -237,7 +248,6 @@ function love.mousepressed(x, y, button)
                         end
                     end
                 end
-                if spot.state == "hidden" or (spot.state == "flaged" and spot.type ~= "minespot") then win = false end
             end
             if notPopulated.bool then love.audio.play(Sounds.dig_spot); break end
         end
@@ -245,7 +255,7 @@ function love.mousepressed(x, y, button)
             Minefield = mswe.populateMinefield(Minefield, tonumber(Data.options[4].value)/100, notPopulated.x, notPopulated.y)
             if Minefield[notPopulated.x][notPopulated.y].surrounded == 0 then mswe.freeZeroFreespots(notPopulated.x, notPopulated.y, Minefield) end
         end
-        if win == true and not notPopulated.bool then
+        if checkWin(Minefield) == true then
             love.audio.play(Sounds.win)
             winGame()
         end
@@ -255,6 +265,7 @@ function love.keypressed(k)
     if Data.gamestate == "options" then
         if k == "e" then
             Data.gamestate = "play"
+            Data.mouseactive = true
             for _, sound in pairs(Sounds) do
                 sound:setVolume(Data.options[5].value/10)
             end
@@ -295,6 +306,7 @@ function love.keypressed(k)
     elseif Data.gamestate == "play" then
         if k == "e" then
             Data.gamestate = "options"
+            Data.mouseactive = false
         elseif k == "n" then
             love.audio.play(Sounds.blip)
             Minefield = newGame()
