@@ -1,5 +1,7 @@
 # Straightforward Minesweeper ([Itch.io](https://mondfuchs.itch.io/straightforwardminesweeper))
 
+<img src="github/banner.png"><br>
+
 *A simple pixelated and animated minesweeper recreation made with Lua and LÖVE2D framework, with various customization settings. For instance: board width, board height, mine density and seed, besides simpler settings, like animations and volume.*
 
 ## How to Play:
